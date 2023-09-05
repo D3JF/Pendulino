@@ -1,34 +1,31 @@
 #include <SFML/Graphics.hpp>
-#include "PendulumCart.h"
+#include "PendulumCart.hpp"
 #include <iostream>
 
 int main()
 {
-	const double c_dist = 0.25; // Cart distance
-	const double c_vel = 0; // Cart velocity
-	const double p_phi = 0.5; // Pendulum angle
-	const double p_omega = 0; // Pendulum angular velocity
-	const double p_mass = 2; // Pendulum mass
-	const double c_mass = 1; // Cart mass
-	const double p_length = 1; // Pendulum length
-
-	// Graphics start constants
-	unsigned int x_0 = 100;
-	unsigned int y_0 = 100;
-
-	// Create a graph image where the pendulum-cart will be plotted
-	sf::Image graph;
-	graph.create(800, 600, sf::Color::Black);
+	const float c_dist = 1.5; // Cart distance
+	const float c_vel = 0; // Cart velocity
+	const float p_phi = 1; // Pendulum angle
+	const float p_omega = 0; // Pendulum angular velocity
+	const float p_mass = 1; // Pendulum mass
+	const float c_mass = 10; // Cart mass
+	const float p_length = 2; // Pendulum length
 
 	// Create the pendulum-cart object
 	PendulumCart pc(c_dist, c_vel, p_phi, p_omega, p_mass, c_mass, p_length);
 
-	// Create window and start a clock that will track the time delta for each frame
+	// Create window
 	sf::RenderWindow window(sf::VideoMode(800, 600), "Pendulino");
+
+	// We want to update the simulation faster than the graphics
+	// So we will start a thread to update the simulation
+	// The main thread will be in charge of rendering
+	sf::Thread simulation(&PendulumCart::update, &pc);
+	simulation.launch();
+
+	// Start the clock to measure the time elapsed between frames
 	sf::Clock clock;
-
-	int cycles = 0;
-
 	// Render loop
 	while (window.isOpen())
 	{
@@ -42,24 +39,17 @@ int main()
 			}
 		}
 
-		// Update the pendulum-cart
-		cycles++;
+		// Get the time elapsed since the last frame
 		sf::Time elapsed = clock.restart();
-		pc.update(elapsed, cycles);
-		
-		// Update the graph
-		pc.plot(graph, 400);
 
-		// Draw the graph
+		// Draw the pendulum-cart to the window
 		window.clear();
-		sf::Texture graph_texture;
-		graph_texture.loadFromImage(graph);
-		sf::Sprite graph_sprite(graph_texture);
-		window.draw(graph_sprite);
+		window.draw(pc);
 		window.display();
-
+		
 	}
 
+	simulation.terminate();
 	return 0;
 
 }
