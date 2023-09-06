@@ -37,23 +37,38 @@ void PendulumCart::update()
 		// Get the time elapsed since the last update
 		float dt = clock.restart().asSeconds();
 
-		// Here, we have isolated the second derivatives of angular acceleration (eps) and linear acceleration (ax)
-		// We use a basic Newton's differential scheme to get back to the angle (phi) and distance (x)
-		// I promise the equations look less intimidating on paper.
-		p_eps =
-			-std::sin(p_phi) * ((p_mass + c_mass) * 9.81 + p_mass * p_len * p_ome * p_ome * std::cos(p_phi))
+		// Using the Lagrangian for mechanical systems, we can derive the equations of motion
+		// We isolate the linear (ax) and angular acceleration (ome) of the system
+		// Doing so, we can calculate their next values
+		float p_eps_next =
+			-std::sin(p_phi) * ((p_mass + c_mass) * 9.81f + p_mass * p_len * p_ome * p_ome * std::cos(p_phi))
 			/
 			(c_mass + p_mass - p_mass * std::cos(p_phi) * std::cos(p_phi))
 			/
 			p_len;
-		c_ax =
-			p_mass * std::sin(p_phi) * (p_len * p_ome * p_ome + 9.81 * std::cos(p_phi))
+		float c_ax_next =
+			p_mass * std::sin(p_phi) * (p_len * p_ome * p_ome + 9.81f * std::cos(p_phi))
 			/
 			(c_mass + p_mass - p_mass * std::cos(p_phi) * std::cos(p_phi));
-		p_ome = p_ome + p_eps * dt;
-		c_vx = c_vx + c_ax * dt;
-		p_phi = p_phi + p_ome * dt;
-		c_x = c_x + c_vx * dt;
+
+		// Now we can use trapezoidal integration twice to get to the angle and position
+		// We increment by the average of the current and next values
+		float p_ome_next = p_ome + (p_eps + p_eps_next) / 2 * dt;
+		float c_vx_next = c_vx + (c_ax + c_ax_next) / 2 * dt;
+		float p_phi_next = p_phi + (p_ome + p_ome_next) / 2 * dt;
+		float c_x_next = c_x + (c_vx + c_vx_next) / 2 * dt;
+
+		// Finally, we update the values
+		p_eps = p_eps_next;
+		c_ax = c_ax_next;
+		p_ome = p_ome_next;
+		c_vx = c_vx_next;
+		p_phi = p_phi_next;
+		c_x = c_x_next;
+
+		// Since this is an O(h^2) method, we can afford to sleep for a tiny bit
+		// Gotta save those precious CPU cycles!
+		sf::sleep(sf::milliseconds(1));
 
 	}
 }
